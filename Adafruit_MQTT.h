@@ -23,7 +23,8 @@
 #define _ADAFRUIT_MQTT_H_
 
 #include "Arduino.h"
-
+#include "SoftwareSerial.h"
+extern SoftwareSerial SoftSerial;
 #if defined(ARDUINO_SAMD_ZERO) || defined(ARDUINO_STM32_FEATHER)
 #define strncpy_P(dest, src, len) strncpy((dest), (src), (len))
 #define strncasecmp_P(f1, f2, len) strncasecmp((f1), (f2), (len))
@@ -34,45 +35,66 @@
 #define ADAFRUIT_MQTT_VERSION_PATCH 0
 
 // Uncomment/comment to turn on/off debug output messages.
-//#define MQTT_DEBUG
+#define MQTT_DEBUG
 // Uncomment/comment to turn on/off error output messages.
-#define MQTT_ERROR
+//#define MQTT_ERROR
 
 // Set where debug messages will be printed.
-#define DEBUG_PRINTER Serial
+
+#define DEBUG_PRINTER SoftSerial
+
+
 // If using something like Zero or Due, change the above to SerialUSB
 
 // Define actual debug output functions when necessary.
 #ifdef MQTT_DEBUG
-#define DEBUG_PRINT(...)                                                       \
-  { DEBUG_PRINTER.print(__VA_ARGS__); }
-#define DEBUG_PRINTLN(...)                                                     \
-  { DEBUG_PRINTER.println(__VA_ARGS__); }
-#define DEBUG_PRINTBUFFER(buffer, len)                                         \
-  { printBuffer(buffer, len); }
+#define ADEBUG_PRINT(...)              \
+  {                                   \
+    DEBUG_PRINTER.print(__VA_ARGS__); \
+  }
+#define ADEBUG_PRINTLN(...)              \
+  {                                     \
+    DEBUG_PRINTER.println(__VA_ARGS__); \
+  }
+#define ADEBUG_PRINTBUFFER(buffer, len) \
+  {                                    \
+    printBuffer(buffer, len);          \
+  }
 #else
-#define DEBUG_PRINT(...)                                                       \
-  {}
-#define DEBUG_PRINTLN(...)                                                     \
-  {}
-#define DEBUG_PRINTBUFFER(buffer, len)                                         \
-  {}
+#define ADEBUG_PRINT(...) \
+  {                      \
+  }
+#define ADEBUG_PRINTLN(...) \
+  {                        \
+  }
+#define ADEBUG_PRINTBUFFER(buffer, len) \
+  {                                    \
+  }
 #endif
 
 #ifdef MQTT_ERROR
-#define ERROR_PRINT(...)                                                       \
-  { DEBUG_PRINTER.print(__VA_ARGS__); }
-#define ERROR_PRINTLN(...)                                                     \
-  { DEBUG_PRINTER.println(__VA_ARGS__); }
-#define ERROR_PRINTBUFFER(buffer, len)                                         \
-  { printBuffer(buffer, len); }
+#define ERROR_PRINT(...)              \
+  {                                   \
+    DEBUG_PRINTER.print(__VA_ARGS__); \
+  }
+#define ERROR_PRINTLN(...)              \
+  {                                     \
+    DEBUG_PRINTER.println(__VA_ARGS__); \
+  }
+#define ERROR_PRINTBUFFER(buffer, len) \
+  {                                    \
+    printBuffer(buffer, len);          \
+  }
 #else
-#define ERROR_PRINT(...)                                                       \
-  {}
-#define ERROR_PRINTLN(...)                                                     \
-  {}
-#define ERROR_PRINTBUFFER(buffer, len)                                         \
-  {}
+#define ERROR_PRINT(...) \
+  {                      \
+  }
+#define ERROR_PRINTLN(...) \
+  {                        \
+  }
+#define ERROR_PRINTBUFFER(buffer, len) \
+  {                                    \
+  }
 #endif
 
 // Use 3 (MQTT 3.0) or 4 (MQTT 3.1.1)
@@ -97,12 +119,12 @@
 #define MQTT_QOS_0 0x0
 
 #define CONNECT_TIMEOUT_MS 6000
-#define PUBLISH_TIMEOUT_MS 500
+#define PUBLISH_TIMEOUT_MS 6000
 #define PING_TIMEOUT_MS 500
 #define SUBACK_TIMEOUT_MS 500
 
 // Adjust as necessary, in seconds.  Default to 5 minutes.
-#define MQTT_CONN_KEEPALIVE 300
+#define MQTT_CONN_KEEPALIVE 20
 
 // Largest full packet we're able to send.
 // Need to be able to store at least ~90 chars for a connect packet with full
@@ -123,8 +145,8 @@
 #define MAXSUBSCRIPTIONS 5
 #define SUBSCRIPTIONDATALEN 20
 #else
-#define MAXSUBSCRIPTIONS 15
-#define SUBSCRIPTIONDATALEN 100
+#define MAXSUBSCRIPTIONS 5
+#define SUBSCRIPTIONDATALEN 150
 #endif
 
 class AdafruitIO_MQTT; // forward decl
@@ -143,7 +165,8 @@ extern void printBuffer(uint8_t *buffer, uint16_t len);
 
 class Adafruit_MQTT_Subscribe; // forward decl
 
-class Adafruit_MQTT {
+class Adafruit_MQTT
+{
 public:
   Adafruit_MQTT(const char *server, uint16_t port, const char *cid,
                 const char *user, const char *pass);
@@ -151,7 +174,7 @@ public:
   Adafruit_MQTT(const char *server, uint16_t port, const char *user = "",
                 const char *pass = "");
   virtual ~Adafruit_MQTT() {}
-
+  void printtest();
   // Connect to the MQTT server.  Returns 0 on success, otherwise an error code
   // that indicates something went wrong:
   //   -1 = Error connecting to server
@@ -164,7 +187,7 @@ public:
   // Use connectErrorString() to get a printable string version of the
   // error.
   int8_t connect();
-  int8_t connect(const char *user, const char *pass);
+  int8_t connect(const char *cid, const char *user, const char *pass);
 
   // Return a printable string version of the error code returned by
   // connect(). This returns a __FlashStringHelper*, which points to a
@@ -189,12 +212,17 @@ public:
   bool publish(const char *topic, const char *payload, uint8_t qos = 0);
   bool publish(const char *topic, uint8_t *payload, uint16_t bLen,
                uint8_t qos = 0);
+  bool publish(const char *ownbuf, uint16_t ownbufsize, const char *topic, const char *payload, uint8_t qos = 0);
+  bool publish(const char *ownbuf, uint16_t ownbufsize, const char *topic, const char *data, uint16_t bLen, uint8_t qos);
+  bool publish(uint8_t *ownbuf, uint16_t ownbufsize, const char *topic, uint8_t *payload, uint16_t bLen,
+               uint8_t qos = 0);
 
   // Add a subscription to receive messages for a topic.  Returns true if the
   // subscription could be added or was already present, false otherwise.
   // Must be called before connect(), subscribing after the connection
   // is made is not currently supported.
-  bool subscribe(Adafruit_MQTT_Subscribe *sub);
+  bool subscribeSetup(Adafruit_MQTT_Subscribe *sub);
+  int8_t subscribe();
 
   // Unsubscribe from a previously subscribed MQTT topic.
   bool unsubscribe(Adafruit_MQTT_Subscribe *sub);
@@ -205,7 +233,8 @@ public:
   // Note that subscribe should be called first for each topic that receives
   // messages!
   Adafruit_MQTT_Subscribe *readSubscription(int16_t timeout = 0);
-
+  Adafruit_MQTT_Subscribe *readSubscriptionChunked(Adafruit_MQTT_Subscribe *sub, int16_t timeout = 0);
+  
   void processPackets(int16_t timeout);
 
   // Ping the server to ensure the connection is still alive.
@@ -231,7 +260,8 @@ protected:
                               int16_t timeout) = 0;
 
   // Read a full packet, keeping note of the correct length
-  uint16_t readFullPacket(uint8_t *buffer, uint16_t maxsize, uint16_t timeout);
+  uint16_t readFullPacket(uint8_t *buffer, uint16_t maxsize, uint16_t timeout, bool *PackedTooBig = nullptr);
+  uint16_t readFullPacketChunked(uint8_t *buffer, uint16_t maxsize, uint16_t timeout, bool *PackedTooBig = nullptr);
   // Properly process packets until you get to one you want
   uint16_t processPacketsUntil(uint8_t *buffer, uint8_t waitforpackettype,
                                uint16_t timeout);
@@ -248,7 +278,8 @@ protected:
   uint8_t will_retain;
   uint8_t buffer[MAXBUFFERSIZE]; // one buffer, used for all incoming/outgoing
   uint16_t packet_id_counter;
-
+  uint32_t remaininglength;//Using this temporary to calculate message length
+  bool chunkedData = false;
 private:
   Adafruit_MQTT_Subscribe *subscriptions[MAXSUBSCRIPTIONS];
 
@@ -265,7 +296,8 @@ private:
   uint8_t pubackPacket(uint8_t *packet, uint16_t packetid);
 };
 
-class Adafruit_MQTT_Publish {
+class Adafruit_MQTT_Publish
+{
 public:
   Adafruit_MQTT_Publish(Adafruit_MQTT *mqttserver, const char *feed,
                         uint8_t qos = 0);
@@ -286,7 +318,8 @@ private:
   uint8_t qos;
 };
 
-class Adafruit_MQTT_Subscribe {
+class Adafruit_MQTT_Subscribe
+{
 public:
   Adafruit_MQTT_Subscribe(Adafruit_MQTT *mqttserver, const char *feedname,
                           uint8_t q = 0);
@@ -299,7 +332,7 @@ public:
 
   const char *topic;
   uint8_t qos;
-
+  bool chunked;
   uint8_t lastread[SUBSCRIPTIONDATALEN];
   // Number valid bytes in lastread. Limited to SUBSCRIPTIONDATALEN-1 to
   // ensure nul terminating lastread.
