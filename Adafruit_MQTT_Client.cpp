@@ -25,12 +25,12 @@ bool Adafruit_MQTT_Client::connectServer() {
   // Grab server name from flash and copy to buffer for name resolution.
   memset(buffer, 0, sizeof(buffer));
   strcpy((char *)buffer, servername);
-  DEBUG_PRINT(F("Connecting to: "));
-  DEBUG_PRINTLN((char *)buffer);
+  ADEBUG_PRINT(F("Connecting to: "));
+  ADEBUG_PRINTLN((char *)buffer);
   // Connect and check for success (0 result).
   int r = client->connect((char *)buffer, portnum);
-  DEBUG_PRINT(F("Connect result: "));
-  DEBUG_PRINTLN(r);
+  ADEBUG_PRINT(F("Connect result: "));
+  ADEBUG_PRINTLN(r);
   return r != 0;
 }
 
@@ -70,8 +70,8 @@ uint16_t Adafruit_MQTT_Client::readPacket(uint8_t *buffer, uint16_t maxlen,
       }
 
       if (len == maxlen) { // we read all we want, bail
-        DEBUG_PRINT(F("Read data:\t"));
-        DEBUG_PRINTBUFFER(buffer, len);
+        ADEBUG_PRINT(F("Read data:\t"));
+        ADEBUG_PRINTBUFFER(buffer, len);
         return len;
       }
     }
@@ -88,19 +88,19 @@ bool Adafruit_MQTT_Client::sendPacket(uint8_t *buffer, uint16_t len) {
     if (client->connected()) {
       // send 250 bytes at most at a time, can adjust this later based on Client
 
-      uint16_t sendlen = len > 250 ? 250 : len;
+      uint16_t sendlen = len;//> MAX_SEND_LEN ? MAX_SEND_LEN : len;
       // Serial.print("Sending: "); Serial.println(sendlen);
       ret = client->write(buffer, sendlen);
-      DEBUG_PRINT(F("Client sendPacket returned: "));
-      DEBUG_PRINTLN(ret);
+      ADEBUG_PRINT(F("Client sendPacket returned: "));
+      ADEBUG_PRINTLN(ret);
       len -= ret;
 
       if (ret != sendlen) {
-        DEBUG_PRINTLN("Failed to send packet.");
+        ADEBUG_PRINTLN("Failed to send packet.");
         return false;
       }
     } else {
-      DEBUG_PRINTLN(F("Connection failed!"));
+      ADEBUG_PRINTLN(F("Connection failed!"));
       return false;
     }
   }
